@@ -1,0 +1,50 @@
+import pandas as pd
+import streamlit as st
+
+# Load dataset
+df = pd.read_csv("C:/Users/Usama/Data Science Task 2/Task 5/Global Superstore.csv", encoding="latin1")
+
+# --- Clean data ---
+df.drop_duplicates(inplace=True)
+df.dropna(subset=["Region", "Category", "Sub-Category", "Sales", "Profit", "Customer Name"], inplace=True)
+df["Sales"] = pd.to_numeric(df["Sales"], errors="coerce")
+df["Profit"] = pd.to_numeric(df["Profit"], errors="coerce")
+df.dropna(subset=["Sales", "Profit"], inplace=True)
+df.reset_index(drop=True, inplace=True)
+
+# --- Sidebar filters ---
+st.sidebar.header("Filters")
+regions = df["Region"].unique().tolist()
+categories = df["Category"].unique().tolist()
+subcats = df["Sub-Category"].unique().tolist()
+
+sel_region = st.sidebar.multiselect("Select Region(s)", regions, default=regions)
+sel_category = st.sidebar.multiselect("Select Category(s)", categories, default=categories)
+sel_subcat = st.sidebar.multiselect("Select Sub-Category(s)", subcats, default=subcats)
+
+filtered_df = df[
+    (df["Region"].isin(sel_region)) &
+    (df["Category"].isin(sel_category)) &
+    (df["Sub-Category"].isin(sel_subcat))
+]
+
+# --- KPIs ---
+total_sales = filtered_df["Sales"].sum()
+total_profit = filtered_df["Profit"].sum()
+
+st.header("Key Performance Indicators (KPIs)")
+col1, col2 = st.columns(2)
+col1.metric("Total Sales", f"${total_sales:,.2f}")
+col2.metric("Total Profit", f"${total_profit:,.2f}")
+
+# --- Top 5 Customers by Sales ---
+top5_customers = (
+    filtered_df.groupby("Customer Name")["Sales"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(5)
+    .reset_index()
+)
+
+st.subheader("Top 5 Customers by Sales")
+st.bar_chart(top5_customers.set_index("Customer Name"))
